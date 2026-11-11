@@ -1,0 +1,22 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+outbox:
+  enabled: true
+  batch-size: 10
+  poll-interval-ms: 60000
+  default-max-retries: 3
+  retry-base-delay: 1s
+  retry-max-backoff: 10s
+  archive:
+    enabled: false
+
+logging:
+  level:
+    com.starter.outbox: DEBUG

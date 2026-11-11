@@ -1,0 +1,108 @@
+# ===========================================================================
+#  Order Service — Example application.yml
+#  Demonstrates outbox starter configuration for all delivery targets
+# ===========================================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orders_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  # Kafka (for kafka delivery handler)
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 0          # outbox handles retries
+      properties:
+        enable.idempotence: true
+
+# ===========================================================================
+#  Outbox Starter Configuration
+# ===========================================================================
+
+outbox:
+  enabled: true
+
+  # Dispatcher settings
+  batch-size: 50
+  poll-interval-ms: 1000
+
+  # Retry strategy
+  default-max-retries: 5
+  retry-base-delay: 5s
+  retry-max-backoff: 1h
+  stale-retry-threshold: 24h
+
+  # Archive / cleanup
+  archive:
+    enabled: true
+    retention: 7d
+    cron: "0 0 3 * * *"     # 3 AM daily
+
+  # Admin API path
+  admin:
+    base-path: /admin/outbox
+
+  # ─────────────────────────────────────────────────────────────
+  #  Pluggable Delivery Targets
+  # ─────────────────────────────────────────────────────────────
+
+  delivery:
+    # Example 1: Kafka delivery
+    kafka:
+      enabled: true
+      # Topics are specified in the destination string: "kafka:orders-topic"
+
+    # Example 2: REST API delivery
+    rest:
+      enabled: true
+      timeout: 30s
+      endpoints:
+        payment-service: https://payments.example.com/api/webhooks
+        notification-service: https://notify.example.com/events
+
+    # Example 3: Database delivery
+    # (DataSources configured programmatically — see DatabaseDeliveryConfig.java)
+    database:
+      enabled: true
+
+# ===========================================================================
+#  Observability
+# ===========================================================================
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    com.starter.outbox: DEBUG
+    com.example.orders: DEBUG
